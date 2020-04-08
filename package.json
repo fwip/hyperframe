@@ -46,6 +46,7 @@
   },
   "dependencies": {
     "aframe": "^1.0.4",
+    "better-sqlite3": "^6.0.1",
     "electron-squirrel-startup": "^1.0.0"
   },
   "devDependencies": {
@@ -56,6 +57,12 @@
     "@electron-forge/maker-zip": "6.0.0-beta.50",
     "@electron-forge/plugin-auto-unpack-natives": "^6.0.0-beta.50",
     "electron": "8.2.0",
-    "hypermerge": "https://github.com/automerge/hypermerge.git"
+    "electron-rebuild": "^1.10.1",
+    "hypermerge": "https://github.com/automerge/hypermerge.git",
+    "hyperswarm": "^2.10.1",
+    "require-rebuild": "^1.2.8"
+  },
+  "resolutions": {
+    "sodium-native": "3.0.1"
   }
 }

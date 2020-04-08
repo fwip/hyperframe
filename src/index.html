@@ -6,10 +6,23 @@
   <title>frames: hyper</title>
   <meta name="description" content="hyper frames">
   <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
+  <script>
+    const ipc = require('electron').ipcRenderer;
+
+    ipc.on('message', (event, message) => {
+      var newDiv = document.createElement("a-box");
+      var props = { position: "-1.05 1.5 -2.82", rotation: "0 25 0", color: "#C3429F" };
+      for (let [k, v] of Object.entries(props)) {
+        console.log(k, v);
+        newDiv.setAttribute(k, v);
+      }
+      document.getElementById('scene').appendChild(newDiv);
+    })
+  </script>
 </head>
 
 <body>
-  <a-scene background="color: #FAFAFA">
+  <a-scene id="scene" background="color: #FAFAFA">
     <a-box position="-1 0.5 -3" rotation="0 45 0" color="#4CC3D9" shadow></a-box>
     <a-sphere position="0 1.25 -5" radius="1.25" color="#EF2D5E" shadow></a-sphere>
     <a-cylinder position="1 0.75 -3" radius="0.5" height="1.5" color="#FFC65D" shadow></a-cylinder>

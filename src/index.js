@@ -1,3 +1,4 @@
+//require('require-rebuild')();
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
 
@@ -6,12 +7,24 @@ if (require('electron-squirrel-startup')) { // eslint-disable-line global-requir
   app.quit();
 }
 
+const { Repo } = require('hypermerge')
+const Hyperswarm = require('hyperswarm')
+
+const pth = '.data'
+
+const repo = new Repo({ pth })
+
+repo.setSwarm(Hyperswarm())
+
 const createWindow = () => {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 1024,
+    height: 800,
     show: false,
+    webPreferences: {
+      nodeIntegration: true,
+    }
   });
 
   // and load the index.html of the app.
@@ -19,9 +32,13 @@ const createWindow = () => {
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show()
+    setTimeout(() => {
+      mainWindow.webContents.send('message', { 'debug': 'hello' })
+    },
+      3000)
   })
   // Open the DevTools.
-  //mainWindow.webContents.openDevTools();
+  mainWindow.webContents.openDevTools();
 };
 
 // This method will be called when Electron has finished
