@@ -6,27 +6,161 @@
   <title>frames: hyper</title>
   <meta name="description" content="hyper frames">
   <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/deep-diff@1/dist/deep-diff.min.js"></script>
   <script>
     const ipc = require('electron').ipcRenderer;
+    const { RepoFrontend } = require('hypermerge')
 
-    ipc.on('message', (event, message) => {
-      var newDiv = document.createElement("a-box");
-      var props = { position: "-1.05 1.5 -2.82", rotation: "0 25 0", color: "#C3429F" };
-      for (let [k, v] of Object.entries(props)) {
-        console.log(k, v);
-        newDiv.setAttribute(k, v);
-      }
-      document.getElementById('scene').appendChild(newDiv);
+    const front = new RepoFrontend()
+    const cache = {}
+    //let url = "hypermerge:/CYLdCpW53zfscmW7DKskuZposaKW6BAd5vAgu2koSjuS"
+    //let url = front.create({})
+    //let url = "hypermerge:/4ZfxVMqEZxBjbYpV3uBiDxYDb2gr2xo9TeRNJcrry96F"
+    //let url = "hypermerge:/FwevzvpExWvujDndgYPmxchLGTmgAyz5GdDfecvYgijT"
+
+    front.subscribe((msg) => {
+      console.log("sending", msg)
+      ipc.send('toBack', msg)
     })
+    ipc.on('toFront', (event, message) => {
+      console.log("got a message from the backend", message)
+      front.receive(message)
+    })
+
+    ipc.on('scene-change', (event, message) => {
+      console.log("scene change msg", message)
+      url = message.url || front.create({})
+      const scene = document.getElementById('scene')
+      console.log("Loading:", url)
+
+      front.watch(url, (state) => {
+        console.log('updating doc with new state', state)
+        for (const [id, attrs] of Object.entries(state)) {
+          let el = document.querySelector(`#scene [automerge~="${id}"`)
+          let append = !el
+          if (append) {
+            el = document.createElement('a-entity')
+          } else {
+            console.log("found existing el for id", id, el)
+          }
+          for (let attr in attrs) {
+            console.log("setting attr", attr, attrs[attr])
+            el.setAttribute(attr, attrs[attr])
+          }
+          if (append) {
+            document.getElementById('scene').appendChild(el)
+            console.log("appending", id, el)
+          }
+        }
+      })
+
+      front.doc(url, (doc) => {
+        //scene.innerHTML = ""
+        console.log("Got a doc", doc)
+      })
+      /*
+      // Insert elements into the scene
+      for (const [id, attrs] of Object.entries(doc)) {
+        let node = document.querySelector(`a-scene > [automerge='id: ${id}']`)
+        if (!node) {
+          node = document.createElement('a-box')
+          for (let attr in attrs) {
+            console.log("setting attr", attr, attrs[attr])
+            node.setAttribute(attr, attrs[attr])
+          }
+          scene.appendChild(node)
+        }
+      }
+      */
+      ipc.send('scene-loaded', { url: url })
+    })
+
+    // Or inline before the <a-scene>.
+    AFRAME.registerComponent('automerge', {
+      // ...
+      schema: {
+        //event: { type: 'string', default: '' },
+        //message: { type: 'string', default: 'Hello, default!' }
+        id: { type: 'string', default: "default_object" }
+      },
+      init: function () {
+        // Register in cache for quick lookup later
+        // FIXME: there must be a better way
+        const id = this.el.getAttribute('automerge').id
+        cache[id] = this
+
+        //let lastAttrs = this.getAttrs()
+        let lastAttrs = this.getAttrs()
+
+        const autoMerge = () => {
+          let attrs = this.getAttrs()
+          let difference = DeepDiff.diff(lastAttrs, attrs)
+          console.log("checking diff...")
+          if (difference) {
+            console.log("changes", difference)
+            front.change(url, (state) => {
+              console.log("state:", state)
+              if (!state[id]) {
+                state[id] = attrs
+                return
+              }
+              DeepDiff.applyDiff(state[id], attrs)
+              //difference.forEach((change) => {
+              //DeepDiff.applyChange(state[id], '', change)
+              //})
+              //state[id] = attrs
+            })
+            lastAttrs = attrs
+          }
+        }
+        setInterval(autoMerge, 2000)
+
+        // Run every 4 seconds forever.
+        //setInterval(syncChanges, 4000)
+      },
+      getAttrs: function () {
+        let attrs = {}
+        this.el.getAttributeNames().forEach(name => {
+          attrs[name] = this.el.getAttribute(name)
+        })
+        return JSON.parse(JSON.stringify(attrs))
+      },
+      applyChanges: function (changes) {
+        // console.log("applying", changes)
+        let attrs = {}
+        this.el.getAttributeNames().forEach(name => {
+          attrs[name] = this.el.getAttribute(name)
+        })
+        attrs = JSON.parse(JSON.stringify(attrs))
+        console.log("diff", DeepDiff.diff(attrs, changes))
+      },
+      updateAttrs: function (attrs) {
+        console.log("Updating!", this, attrs)
+        for (let attr in attrs) {
+          console.log("setting attr", attr, attrs[attr])
+          this.el.setAttribute(attr, attrs[attr])
+        }
+      }
+    })
+
   </script>
 </head>
 
 <body>
-  <a-scene id="scene" background="color: #FAFAFA">
-    <a-box position="-1 0.5 -3" rotation="0 45 0" color="#4CC3D9" shadow></a-box>
-    <a-sphere position="0 1.25 -5" radius="1.25" color="#EF2D5E" shadow></a-sphere>
-    <a-cylinder position="1 0.75 -3" radius="0.5" height="1.5" color="#FFC65D" shadow></a-cylinder>
+  <a-scene debug id="scene" background="color: #FAcAFA">
+    <!--
+    <a-box automerge="id: box" position="-1 0.5 -3" rotation="0 45 0" color="#4CC3D9"></a-box>
+-->
+    <a-sphere position="0 1.25 -5" radius="1.25" color="#EF2D5E"></a-sphere>
+    <a-cylinder automerge="id: cylinder" position="1 0.75 -3" radius="0.5" height="1.5" color="#FFC65D"></a-cylinder>
     <a-plane position="0 0 -4" rotation="-90 0 0" width="4" height="4" color="#7BC8A4" shadow></a-plane>
+    <a-sky color="#ECECEC"></a-sky>
+    <!--
+      <a-entity box="width: 0.5; height: 0.25; depth: 1; color: orange" position="0 0 -5"></a-entity>
+      <a-box automerge="id: boxy;"></a-box>
+      <a-sphere position="0 1.25 -5" radius="1.25" color="#EF2D5E" shadow></a-sphere>
+      <a-cylinder position="1 0.75 -3" radius="0.5" height="1.5" color="#FFC65D" shadow></a-cylinder>
+    -->
   </a-scene>
 </body>
 
