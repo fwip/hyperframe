@@ -57,7 +57,7 @@
     "@electron-forge/maker-squirrel": "6.0.0-beta.50",
     "@electron-forge/maker-zip": "6.0.0-beta.50",
     "@electron-forge/plugin-auto-unpack-natives": "^6.0.0-beta.50",
-    "electron": "8.2.0",
+    "electron": "8.5.1",
     "electron-rebuild": "^1.10.1",
     "hypermerge": "https://github.com/automerge/hypermerge.git",
     "hyperswarm": "^2.10.1",
